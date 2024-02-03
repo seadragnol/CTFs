@@ -5,7 +5,7 @@ from pwn import *
 context.terminal = ["tmux", "splitw", "-h"]
 
 exe = ELF("chall_patched")
-libc = ELF("./libc-2.27.so")
+libc = ELF("libc-18292bd12d37bfaf58e8dded9db7f1f5da1192cb.so")
 ld = ELF("./ld-2.27.so")
 
 context.binary = exe

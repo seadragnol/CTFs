@@ -31,7 +31,7 @@ chall: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically link
     PIE:      PIE enabled
 ```
 
-libc version: 2.
+libc version: 2.27
 
 脆弱性:
 

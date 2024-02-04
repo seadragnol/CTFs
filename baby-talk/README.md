@@ -30,6 +30,12 @@ get libc file:
 docker cp hardcore_moore:/srv/lib/x86_64-linux-gnu/libc-2.27.so ./
 ```
 
+### 2. pwninit
+
+```bash
+pwninit --template-path ../../../../challenges/template.py --bin chall --libc libc-2.27.so
+```
+
 ## IV. recon
 
 ```bash

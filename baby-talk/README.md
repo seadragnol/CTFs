@@ -10,7 +10,7 @@ take it easy baby, don't you ever grow up, just stay this simple
 
 `strtok()` leads to `off by one` => [Poison NULL byte](https://0x434b.dev/overview-of-glibc-heap-exploitation-techniques/#poison-null-byte)
 
-[Poison NULL byte](https://0x434b.dev/overview-of-glibc-heap-exploitation-techniques/#poison-null-byte) => control tcache chunk => inject tcache entry => malloc return arbitrary address => arbitrary write
+[Poison NULL byte](https://0x434b.dev/overview-of-glibc-heap-exploitation-techniques/#poison-null-byte) => overlapping chunks => control tcache chunk => inject tcache entry => malloc return arbitrary address => arbitrary write
 
 Arbitrary write => [Inject malloc hooks](https://0x434b.dev/overview-of-glibc-heap-exploitation-techniques/#malloc-hooks) + one gadget => flag.
 

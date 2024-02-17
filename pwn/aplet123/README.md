@@ -10,7 +10,7 @@ ApletGPT at home:
 
 ## II. Signatures
 
-leak stack canary
+leak stack canary because of gets overflow
 
 ## III. recon
 

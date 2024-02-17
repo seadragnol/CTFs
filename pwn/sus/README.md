@@ -10,6 +10,9 @@ sus
 
 leak got, ret2libc
 
+`lactf{amongsus_aek7d2hqhgj29v21}`
+
+
 ## III. recon
 
 ```bash

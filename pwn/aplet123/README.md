@@ -12,6 +12,8 @@ ApletGPT at home:
 
 leak stack canary because of gets overflow
 
+`lactf{so_untrue_ei2p1wfwh9np2gg6}`
+
 ## III. recon
 
 ```bash

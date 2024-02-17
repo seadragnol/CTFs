@@ -12,6 +12,8 @@
 
 leak canary + ret address => can overflow and write win to ret addr
 
+`lactf{m0n7y_533_m0n7y_d0}`
+
 ## III. Setup challenge
 
 ```bash

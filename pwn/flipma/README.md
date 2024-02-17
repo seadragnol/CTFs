@@ -85,4 +85,4 @@ undefined8 main(void)
 
 ## IX. References
 
-[Tcache Dup < 2.29](https://0x434b.dev/overview-of-glibc-heap-exploitation-techniques/#tcache-dup)
+<https://robertchen.cc/blog/2020/06/28/house-of-red>

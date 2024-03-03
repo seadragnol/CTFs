@@ -83,7 +83,7 @@ info(f"system.address: {hex(libc.sym['system'])}")
 
 system = libc.sym['system']
 
-# overwrite system to got strcspn
+# overwrite strcspn@got = system
 
 ## key = target, value = data. [target] = data
 format_string_dict = {}

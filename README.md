@@ -6,7 +6,6 @@ writeup chi tiết nằm ở đây: [notion](https://seadragnol.notion.site/Cybe
 
 ### pwn
 
-
 | id  | name                                              | points | 難易度    | status  | Summary                                                                                                                                                                                                                                                                                      |
 | --- | ------------------------------------------------- | ------ | --------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Tutorial                                          | 300    | very easy | Solved  | basic integer overflow                                                                                                                                                                                                                                                                       |
@@ -24,14 +23,26 @@ new knowledges:
 
 - pwndbg: if PIE on, use breakrva to set break point.
 - pwntools: inside flat(), don't need to use p64 p32.
-- if you want to find 'syscall, ret' gadget, use pwntools or ROPgadget with flag `--multibr`. 
+- if you want to find 'syscall, ret' gadget, use pwntools or ROPgadget with flag `--multibr`.
 
 ### rev
 
+| id  | name                                  | points | 難易度    | status | Summary                                                                                                                                                          |
+| --- | ------------------------------------- | ------ | --------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | [LootStash](./rev/lootstash/)         | 300    | very easy | Solved | `strings`                                                                                                                                                        |
+| 2   | [PackedAway](./rev/packed_away/)      | 300    | very easy | Solved | `upx -d` => `strings`                                                                                                                                            |
+| 3   | [BoxCutter](./rev/boxcutter/)         | 300    | very easy | Solved | `strace`                                                                                                                                                         |
+| 4   | [Crushing](./rev/crushing/)           | 300    | easy      | Solved | reverse một thuật toán `compression`                                                                                                                             |
+| 5   | [QuickScan](./rev/quickscan/)         | 300    | medium    | Solved | Players will be sent a series of small, randomly generated ELF files and must rapidly and automatically anlalyse them in order to extract required data.         |
+| 6   | [FollowThePath](./rev/followthepath/) | 300    | medium    | Solved | self-decrypting code stub                                                                                                                                        |
+| 7   | [Metagaming](./rev/metagaming/)       | 325    | hard      | Solved | giả lập assembly, flag được đi qua một loạt các instructions, trong đó bao gồm cả các instructions gây nhiễu, nếu lọc ra được thì có thể đi ngược lấy được flag. |
+| 8   | FlecksOfGold                          | 350    | hard      | Nope   |                                                                                                                                                                  |
+| 9   | MazeOfPower                           | 350    | insane    | Nope   |                                                                                                                                                                  |
+
+## results
+
 ![img](./img/teammvp.jpg)
 
-## writeups
-
-[notion](https://seadragnol.notion.site/Cyber-Apocalypse-2024-Hacker-Royale-bbc9e7a6b1424c28ab08ddaffbb7fc42?pvs=4)
-
 ## References
+
+scoreboard: <https://ctf.hackthebox.com/event/1386/scoreboard>

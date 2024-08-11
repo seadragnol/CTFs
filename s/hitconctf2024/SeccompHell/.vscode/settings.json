@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "ldt.h": "c",
+        "array": "c",
+        "string_view": "c",
+        "initializer_list": "c"
+    }
+}
